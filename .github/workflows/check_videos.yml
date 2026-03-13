@@ -1,0 +1,49 @@
+name: Check Azure AI Foundry Playlist
+
+# Läuft täglich um 08:00 UTC (09:00 MEZ / 10:00 MESZ)
+# Kann auch manuell über "Run workflow" ausgelöst werden
+on:
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+
+jobs:
+  check-videos:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # Für den Commit von seen_videos.json
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Abhängigkeiten installieren
+        run: pip install -r requirements.txt
+
+      - name: Neue Videos prüfen und Mails versenden
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+        run: python check_new_videos.py
+
+      # Speichert den aktualisierten Stand der verarbeiteten Videos
+      # [skip ci] verhindert, dass dieser Commit selbst einen neuen Run auslöst
+      - name: seen_videos.json committen (falls aktualisiert)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add seen_videos.json
+          if git diff --staged --quiet; then
+            echo "Keine neuen Videos verarbeitet – kein Commit nötig."
+          else
+            git commit -m "chore: update seen_videos.json [skip ci]"
+            git push
+          fi

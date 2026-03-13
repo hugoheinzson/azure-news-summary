@@ -1,0 +1,3 @@
+anthropic
+youtube-transcript-api
+feedparser
