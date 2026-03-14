@@ -183,37 +183,31 @@ def main() -> None:
     seen = load_seen_videos()
     videos = fetch_playlist_videos()
 
-    new_videos = [v for v in videos if v["id"] not in seen]
+    # Nur das aktuellste Video (RSS-Feed liefert neuestes zuerst)
+    video = videos[0]
 
-    if not new_videos:
-        print("Keine neuen Videos gefunden. Alles auf dem neuesten Stand.")
+    if video["id"] in seen:
+        print(f"Aktuellstes Video bereits verarbeitet: {video['title']}")
         return
 
-    print(f"{len(new_videos)} neue Video(s) gefunden.")
-    updated = False
+    print(f"Neues aktuellstes Video gefunden: {video['title']} ({video['id']})")
 
-    for video in new_videos:
-        print(f"\nVerarbeite: {video['title']} ({video['id']})")
+    transcript = get_transcript(video["id"])
 
-        transcript = get_transcript(video["id"])
-
-        if not transcript:
-            print("  Übersprungen (kein Transkript verfügbar).")
-            seen[video["id"]] = {"title": video["title"], "status": "no_transcript"}
-            updated = True
-            continue
-
-        print(f"  Transkript erhalten ({len(transcript)} Zeichen). Erstelle Summary …")
-        summary = summarize_transcript(video["title"], transcript)
-
-        send_email(video, summary)
-
-        seen[video["id"]] = {"title": video["title"], "status": "sent"}
-        updated = True
-
-    if updated:
+    if not transcript:
+        print("  Übersprungen (kein Transkript verfügbar).")
+        seen[video["id"]] = {"title": video["title"], "status": "no_transcript"}
         save_seen_videos(seen)
-        print("\nseen_videos.json aktualisiert.")
+        return
+
+    print(f"  Transkript erhalten ({len(transcript)} Zeichen). Erstelle Summary …")
+    summary = summarize_transcript(video["title"], transcript)
+
+    send_email(video, summary)
+
+    seen[video["id"]] = {"title": video["title"], "status": "sent"}
+    save_seen_videos(seen)
+    print("\nseen_videos.json aktualisiert.")
 
 
 if __name__ == "__main__":
