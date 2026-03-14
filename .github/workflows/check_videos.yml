@@ -45,5 +45,6 @@ jobs:
             echo "Keine neuen Videos verarbeitet – kein Commit nötig."
           else
             git commit -m "chore: update seen_videos.json [skip ci]"
+            git pull --rebase origin HEAD
             git push
           fi
