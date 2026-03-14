@@ -179,9 +179,24 @@ def send_email(video: dict, summary: str) -> None:
     print(f"  Mail gesendet an: {', '.join(recipients)}")
 
 
+def check_required_env_vars() -> None:
+    """Fails early with a clear message if required secrets are missing."""
+    required = ["ANTHROPIC_API_KEY", "GMAIL_ADDRESS", "GMAIL_APP_PASSWORD", "RECIPIENT_EMAIL"]
+    missing = [v for v in required if not os.environ.get(v)]
+    if missing:
+        print(f"FEHLER: Folgende Environment-Variablen fehlen: {', '.join(missing)}", file=sys.stderr)
+        print("Bitte diese Werte als GitHub Secrets hinterlegen.", file=sys.stderr)
+        sys.exit(1)
+
+
 def main() -> None:
+    check_required_env_vars()
     seen = load_seen_videos()
     videos = fetch_playlist_videos()
+
+    if not videos:
+        print("RSS-Feed enthält keine Videos – nichts zu tun.")
+        return
 
     # Nur das aktuellste Video (RSS-Feed liefert neuestes zuerst)
     video = videos[0]
